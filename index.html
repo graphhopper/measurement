@@ -53,6 +53,10 @@
         });
     });
 
+    /* The text input is converted in a json with the headers as keys and
+     * row entries as value ala header1:[row1_col1, row2_col1, ...], 
+     * header2:[row1_col2, row2_col2, ...], ...
+     */
     function processCSV(allText) {
         var allTextLines = allText.split(/\r\n|\n/);
         if(allTextLines.length < 1) {
@@ -89,9 +93,9 @@
     
     var conflateColumn = "commit";
 
-    /* This method calculates the mean value of all values for the same
-     * commit (using the column named "commit"). E.g. if the array is
-     * 2,2,3,3,3 and the commit column is commit1,commit1,commit2,commit2,commit2
+    /* This method calculates the mean value of values for the same commit 
+     * (using the column named "commit"). E.g. if the array (corresponds to a column) 
+     * is 2,2,3,3,3 and the commit column is commit1,commit1,commit2,commit2,commit2
      * then the resulting array is 2,3 (length is the number of different commits)
      * with an error array of 0,0
      */
@@ -143,6 +147,9 @@
        return result;
     }
 
+    /* This method picks the traceEntries from the dataSeries and plots it,
+     * plus its errors
+     */
     function plot(divName, dataSeries, traceEntries) {
        var plotArray = [];
        var max = 0;
