@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GraphHopper Measurement</title>
+    <script src="https://cdn.plot.ly/plotly-1.5.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <style>
+            body {
+                color: #000;
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                line-height: 1.4;
+                color: #111111;
+                background-color: #EEEEEE;
+                margin: 0;
+            }
+            #tabs {
+                width: 500px;
+                margin: 0 auto;
+            }
+
+    </style>
+</head>
+<body>
+
+<div id="chart">
+</div>
+
+<script>
+  var graphData = [];
+    var dates = [];
+
+    $(document).ready(function (e) {
+        // do not display 'not well formed' http://stackoverflow.com/q/335409/194609
+        $.ajaxSetup({'beforeSend': function (xhr) {
+                if (xhr.overrideMimeType)
+                    xhr.overrideMimeType("text/plain");
+            }});
+        var urls = [];
+        var host = "http://localhost:8080/"
+        var path = "master-compare.dat"
+        $.ajax({
+            type: "GET",
+            url: host + path,
+            dataType: "text",
+            success: function (dataCSV) {
+                var dataSeries = processCSV(dataCSV);
+                var dataForPlot = convertToPlotWithError(dataSeries);
+                plot(dataForPlot);
+            }
+        });
+
+        $("#tabs a").click(function () {
+            $("#charts div").remove();
+            plot($(this).text());
+        });
+    });
+
+    function processCSV(allText) {
+        var allTextLines = allText.split(/\r\n|\n/);
+        if(allTextLines.length < 1) {
+           console.log("something is broken " + allTextLines.length);
+           return;
+        }
+
+        var result = {};
+        var allHeaders = allTextLines[0].split(',');
+        for(var col = 0; col < allHeaders.length; col++) {
+           allHeaders[col] = allHeaders[col].trim();
+           result[allHeaders[col]] = [];
+        }
+        
+        for (var j = 1; j < allTextLines.length; j++) {
+           var line = allTextLines[j];
+           var allColumns = line.split(',');
+           if(allColumns.length != allHeaders.length) {
+              console.log("skip line " + j + " (cols: " + allColumns.length + ") " + " -> " + line)
+              continue;
+           }
+        
+           for(var col = 0; col < allColumns.length; col++) {
+              var colVal = allColumns[col].trim();
+              try {
+                 colVal = parseFloat(colVal);
+              } catch(e) {
+                 console.log(e)
+              }
+              result[allHeaders[col]].push(colVal);
+           }
+        }
+        return result;
+    }
+    
+    function convertToPlotWithError(dataSeries) {
+    
+       var values = ["routingCH.mean", "routingCH_no_instr.mean"];
+       var plotArray = [];
+       
+       for(var entryIdx = 0; entryIdx < values.length; entryIdx++) {
+         var value = values[entryIdx];
+         var plotData = { x: [], y: [], type: 'scatter', name: value};
+         plotArray.push(plotData);
+         var myarray = dataSeries[value];
+         for(var i = 0; i < myarray.length; i++) {
+           plotData.x.push(i); // use commit hash or time or date instead?
+           plotData.y.push(myarray[i]);
+         }
+       }
+       return plotArray;
+    }
+    
+    function plot(plotArray) {
+       Plotly.newPlot('chart', plotArray);
+    }
+
+// TODO error_y
+//    var data = [
+//  {
+//    x: [0, 1, 2],
+//    y: [6, 10, 2],
+//    error_y: {
+//      type: 'data',
+//      array: [1, 2, 3],
+//      visible: true
+//    },
+//    type: 'scatter'
+//  }];
+
+</script>
+</body>
+</html>
