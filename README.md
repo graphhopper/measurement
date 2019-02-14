@@ -8,6 +8,7 @@ View results in the browser.
 
  * support multiple tabs
  * support multiple branches
+ * "commit" column is missing from summary file (fix in GH core)
 
 # Usage
 
