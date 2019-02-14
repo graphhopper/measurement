@@ -17,7 +17,6 @@
                 width: 500px;
                 margin: 0 auto;
             }
-
     </style>
 </head>
 <body>
@@ -46,6 +45,7 @@
             dataType: "text",
             success: function (dataCSV) {
                 var dataSeries = processCSV(dataCSV);
+                dataSeries = calculateError(dataSeries);
                 for(var g = 0; g < groups.length; g++) {
                    plot("chart"+g, dataSeries, groups[g]);
                 }
@@ -74,12 +74,12 @@
               console.warn("skip line " + j + " (cols: " + allColumns.length + ") " + " -> " + line)
               continue;
            }
-        
+
            for(var col = 0; col < allColumns.length; col++) {
               var colStr = allColumns[col].trim();
               var colVal = parseFloat(colStr);
               if(isNaN(colVal))
-                colVal = -1;	
+                colVal = colStr;
               result[allHeaders[col]].push(colVal);
            }
         }
@@ -87,48 +87,99 @@
         return result;
     }
     
+    var conflateColumn = "commit";
+
+    /* This method calculates the mean value of all values for the same
+     * commit (using the column named "commit"). E.g. if the array is
+     * 2,2,3,3,3 and the commit column is commit1,commit1,commit2,commit2,commit2
+     * then the resulting array is 2,3 (length is the number of different commits)
+     * with an error array of 0,0
+     */
+    function calculateError(dataSeries) {
+       var commitCol = dataSeries[conflateColumn];
+       if(!commitCol || commitCol.length < 1)
+         return dataSeries;
+
+       var result = {};
+       for (var key in dataSeries) {
+         if (!dataSeries.hasOwnProperty(key))
+           continue;
+
+         var arr = dataSeries[key];
+         var resultArr = [];
+         var errorArr = [];
+         result[key] = resultArr;
+         result[key + "_error"] = errorArr;
+
+         var commitHash = commitCol[0];
+         // TODO calc std deviation
+         var max = 0, count = 0, sum = 0;
+         for(var i = 0; i < arr.length; i++) {
+           var value = arr[i];
+
+           if(conflateColumn !== key) {
+             sum += value;
+             if(max < value)
+               max = value;
+           }
+           count++;
+
+           if(commitHash !== commitCol[i] || i + 1 == arr.length) {
+             if(conflateColumn === key) {
+               resultArr.push(commitHash);
+             } else {
+               resultArr.push(sum / count);
+               errorArr.push(max - sum / count);
+               max = 0;
+               sum = 0;
+             }
+             count = 0;
+             commitHash = commitCol[i];
+           }
+         }
+       }
+       return result;
+    }
+
     function plot(divName, dataSeries, traceEntries) {
        var plotArray = [];
        var max = 0;
+       var commitCol = dataSeries[conflateColumn];
+
        for(var entryIdx = 0; entryIdx < traceEntries.length; entryIdx++) {
          var entry = traceEntries[entryIdx];
-         var traceData = { x: [], y: [], type: 'scatter', name: entry, connectgaps: false};
          var myarray = dataSeries[entry];
-         if(!myarray) {
+         if(!myarray || myarray.length < 1) {
            console.warn("cannot find '" + entry + "' in data");
            continue;
          }
-         plotArray.push(traceData);
+         var traceData = { x: [], y: myarray, type: 'scatter', name: entry, connectgaps: false};
+         var dataError = dataSeries[entry + "_error"];
+         if(dataError && dataError.length == myarray.length) {
+           traceData.error_y = { type: 'data', array: dataError, visible: true};
+         }
+
          for(var i = 0; i < myarray.length; i++) {
-           traceData.x.push(i); // use commit hash or time or date instead?
-           traceData.y.push(myarray[i]);
+           if(commitCol)
+             traceData.x.push(commitCol[i]);
+           else
+             traceData.x.push(i);
+
            if(max < myarray[i])
              max = myarray[i];
          }
+         plotArray.push(traceData);
        }
 
-      var layout = {
-        showlegend: true, 
-        /*title: traceEntries[0],*/
-        yaxis: {
-          range: [0, max],
-          title: 'ms'
-       }};
+       var layout = {
+         showlegend: true,
+         /*title: traceEntries[0],*/
+         yaxis: {
+           range: [0, max],
+           title: 'ms'
+         }};
        Plotly.newPlot(divName, plotArray, layout);
     }
-
-// TODO error_y
-//    var data = [
-//  {
-//    x: [0, 1, 2],
-//    y: [6, 10, 2],
-//    error_y: {
-//      type: 'data',
-//      array: [1, 2, 3],
-//      visible: true
-//    },
-//    type: 'scatter'
-//  }];
 
 </script>
 </body>

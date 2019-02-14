@@ -8,7 +8,6 @@ View results in the browser.
 
  * support multiple tabs
  * support multiple branches
- * use error bars if same commit
 
 # Usage
 
