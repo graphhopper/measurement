@@ -26,4 +26,4 @@ java -Xmx6g -Xms6g -Duser.country=UK -Duser.language=en -cp gh-tools.jar com.gra
 Either configure nginx or for localhost do:
 
 npm install http-server -g
-http-server -o --cors -a localhost
+http-server --cors -a localhost -c 10

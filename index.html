@@ -2,9 +2,8 @@
 <html>
 <head>
     <title>GraphHopper Measurement</title>
-    <script src="https://cdn.plot.ly/plotly-1.5.0.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
-            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="js/plotly-1.5.0.min.js"></script>
+    <script src="js/jquery-3.3.1.min.js"></script>
     <style>
             body {
                 color: #000;
@@ -23,13 +22,15 @@
 </head>
 <body>
 
-<div id="chart">
+<div id="chart0">
+</div>
+<div id="chart1">
 </div>
 
 <script>
-  var graphData = [];
-    var dates = [];
-
+    var groups = [["routingCH.mean", "routingCH_no_instr.mean", "routingCH_edge.mean"],
+                 ["routing.mean"]];
+    
     $(document).ready(function (e) {
         // do not display 'not well formed' http://stackoverflow.com/q/335409/194609
         $.ajaxSetup({'beforeSend': function (xhr) {
@@ -37,29 +38,25 @@
                     xhr.overrideMimeType("text/plain");
             }});
         var urls = [];
-        var host = "http://localhost:8080/"
-        var path = "master-compare.dat"
+        var host = "http://localhost:8080/";
+        var path = "master-compare.dat?rand=" + Math.random();
         $.ajax({
             type: "GET",
             url: host + path,
             dataType: "text",
             success: function (dataCSV) {
                 var dataSeries = processCSV(dataCSV);
-                var dataForPlot = convertToPlotWithError(dataSeries);
-                plot(dataForPlot);
+                for(var g = 0; g < groups.length; g++) {
+                   plot("chart"+g, dataSeries, groups[g]);
+                }
             }
-        });
-
-        $("#tabs a").click(function () {
-            $("#charts div").remove();
-            plot($(this).text());
         });
     });
 
     function processCSV(allText) {
         var allTextLines = allText.split(/\r\n|\n/);
         if(allTextLines.length < 1) {
-           console.log("something is broken " + allTextLines.length);
+           console.warn("something is broken " + allTextLines.length);
            return;
         }
 
@@ -74,43 +71,50 @@
            var line = allTextLines[j];
            var allColumns = line.split(',');
            if(allColumns.length != allHeaders.length) {
-              console.log("skip line " + j + " (cols: " + allColumns.length + ") " + " -> " + line)
+              console.warn("skip line " + j + " (cols: " + allColumns.length + ") " + " -> " + line)
               continue;
            }
         
            for(var col = 0; col < allColumns.length; col++) {
-              var colVal = allColumns[col].trim();
-              try {
-                 colVal = parseFloat(colVal);
-              } catch(e) {
-                 console.log(e)
-              }
+              var colStr = allColumns[col].trim();
+              var colVal = parseFloat(colStr);
+              if(isNaN(colVal))
+                colVal = -1;	
               result[allHeaders[col]].push(colVal);
            }
         }
+        console.log(result);
         return result;
     }
     
-    function convertToPlotWithError(dataSeries) {
-    
-       var values = ["routingCH.mean", "routingCH_no_instr.mean"];
+    function plot(divName, dataSeries, traceEntries) {
        var plotArray = [];
-       
-       for(var entryIdx = 0; entryIdx < values.length; entryIdx++) {
-         var value = values[entryIdx];
-         var plotData = { x: [], y: [], type: 'scatter', name: value};
-         plotArray.push(plotData);
-         var myarray = dataSeries[value];
+       var max = 0;
+       for(var entryIdx = 0; entryIdx < traceEntries.length; entryIdx++) {
+         var entry = traceEntries[entryIdx];
+         var traceData = { x: [], y: [], type: 'scatter', name: entry, connectgaps: false};
+         var myarray = dataSeries[entry];
+         if(!myarray) {
+           console.warn("cannot find '" + entry + "' in data");
+           continue;
+         }
+         plotArray.push(traceData);
          for(var i = 0; i < myarray.length; i++) {
-           plotData.x.push(i); // use commit hash or time or date instead?
-           plotData.y.push(myarray[i]);
+           traceData.x.push(i); // use commit hash or time or date instead?
+           traceData.y.push(myarray[i]);
+           if(max < myarray[i])
+             max = myarray[i];
          }
        }
-       return plotArray;
-    }
-    
-    function plot(plotArray) {
-       Plotly.newPlot('chart', plotArray);
+
+      var layout = {
+        showlegend: true, 
+        /*title: traceEntries[0],*/
+        yaxis: {
+          range: [0, max],
+          title: 'ms'
+       }};
+       Plotly.newPlot(divName, plotArray, layout);
     }
 
 // TODO error_y
