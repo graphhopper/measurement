@@ -135,7 +135,7 @@
            }
            count++;
 
-           if(commitHash !== commitCol[i] || i + 1 == arr.length) {
+           if(i + 1 == arr.length || commitHash !== commitCol[i + 1]) {
              if(conflateColumnStr === key) {
                resultArr.push(commitHash);
              } else {
@@ -147,9 +147,10 @@
                max = 0;
                min = Number.MAX_VALUE;
                sum = 0;
+               count = 0;
              }
-             count = 0;
-             commitHash = commitCol[i];
+             if(i + 1 < arr.length)
+               commitHash = commitCol[i + 1];
            }
          }
        }
