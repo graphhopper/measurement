@@ -39,7 +39,7 @@
         var urls = [];
         var urlString = window.location.href;
         var m = new URL(urlString).searchParams.get("measurement").replace(/[\W_/]/g, "-");
-        var host = "http://localhost:8080/";
+        var host = "/";
         var path = m + ".dat?rand=" + Math.random();
         $.ajax({
             type: "GET",
