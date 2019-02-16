@@ -7,8 +7,6 @@ View results in the browser.
 # To do list
 
  * support multiple tabs
- * support multiple branches
- * "commit" column is missing from summary file (fix in GH core)
 
 # Usage
 
@@ -22,3 +20,7 @@ Either configure nginx or for localhost do:
 
 npm install http-server -g
 http-server --cors -a localhost -c 10
+
+3. Open Browser
+
+http://localhost:8080?measurement=compare.dat

@@ -21,14 +21,14 @@
 </head>
 <body>
 
-<div id="chart0">
-</div>
-<div id="chart1">
-</div>
+<div id="chart0"/>
+<div id="chart1"/>
+<div id="chart2"/>
 
 <script>
     var groups = [["routingCH.mean", "routingCH_no_instr.mean", "routingCH_edge.mean"],
-                 ["routing.mean"]];
+                 ["routing.mean", "routingLM8.mean"],
+                 ["prepare.ch.time", "prepare.lm.time"]];
     
     $(document).ready(function (e) {
         // do not display 'not well formed' http://stackoverflow.com/q/335409/194609
@@ -37,8 +37,10 @@
                     xhr.overrideMimeType("text/plain");
             }});
         var urls = [];
+        var urlString = window.location.href;
+        var m = new URL(urlString).searchParams.get("measurement").replace(/[\W_/]/g, "-");
         var host = "http://localhost:8080/";
-        var path = "master-compare.dat?rand=" + Math.random();
+        var path = m + ".dat?rand=" + Math.random();
         $.ajax({
             type: "GET",
             url: host + path,
@@ -91,16 +93,16 @@
         return result;
     }
     
-    var conflateColumn = "commit";
+    var conflateColumnStr = "measurement.gitinfo";
 
     /* This method calculates the mean value of values for the same commit 
-     * (using the column named "commit"). E.g. if the array (corresponds to a column) 
-     * is 2,2,3,3,3 and the commit column is commit1,commit1,commit2,commit2,commit2
+     * (using the column conflateColumnStr). E.g. if the array (corresponds to a column) 
+     * is 2,2,3,3,3 and the conflate column is commit1,commit1,commit2,commit2,commit2
      * then the resulting array is 2,3 (length is the number of different commits)
      * with an error array of 0,0
      */
     function calculateError(dataSeries) {
-       var commitCol = dataSeries[conflateColumn];
+       var commitCol = dataSeries[conflateColumnStr];
        if(!commitCol || commitCol.length < 1)
          return dataSeries;
 
@@ -121,7 +123,7 @@
          for(var i = 0; i < arr.length; i++) {
            var value = arr[i];
 
-           if(conflateColumn !== key) {
+           if(conflateColumnStr !== key) {
              sum += value;
              if(max < value)
                max = value;
@@ -129,7 +131,7 @@
            count++;
 
            if(commitHash !== commitCol[i] || i + 1 == arr.length) {
-             if(conflateColumn === key) {
+             if(conflateColumnStr === key) {
                resultArr.push(commitHash);
              } else {
                var mean = sum / count;
@@ -153,7 +155,7 @@
     function plot(divName, dataSeries, traceEntries) {
        var plotArray = [];
        var max = 0;
-       var commitCol = dataSeries[conflateColumn];
+       var commitCol = dataSeries[conflateColumnStr];
 
        for(var entryIdx = 0; entryIdx < traceEntries.length; entryIdx++) {
          var entry = traceEntries[entryIdx];
@@ -162,7 +164,8 @@
            console.warn("cannot find '" + entry + "' in data");
            continue;
          }
-         var traceData = { x: [], y: myarray, type: 'scatter', name: entry, connectgaps: false};
+         var traceData = { x: [], y: myarray, type: 'scatter', name: entry, connectgaps:
+         false};
          var dataError = dataSeries[entry + "_error"];
          if(dataError && dataError.length == myarray.length) {
            traceData.error_y = { type: 'data', array: dataError, visible: true};
@@ -184,7 +187,7 @@
          showlegend: true,
          /*title: traceEntries[0],*/
          yaxis: {
-           range: [0, max],
+           range: [0, max*1.1],
            title: 'ms'
          }};
        Plotly.newPlot(divName, plotArray, layout);
