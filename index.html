@@ -112,14 +112,13 @@
            continue;
 
          var arr = dataSeries[key];
-         var resultArr = [];
-         var errorArr = [];
+         var resultArr = [], errorArrMax = [], errorArrMin = [];
          result[key] = resultArr;
-         result[key + "_error"] = errorArr;
+         result[key + "_delta.max"] = errorArrMax;
+         result[key + "_delta.min"] = errorArrMin;
 
          var commitHash = commitCol[0];
-         // TODO calc std deviation
-         var max = 0.0, count = 0, sum = 0.0;
+         var max = 0.0, min = Number.MAX_VALUE, count = 0, sum = 0.0;
          for(var i = 0; i < arr.length; i++) {
            var value = arr[i];
 
@@ -127,6 +126,8 @@
              sum += value;
              if(max < value)
                max = value;
+             if(min > value)
+               min = value;
            }
            count++;
 
@@ -137,8 +138,10 @@
                var mean = sum / count;
                resultArr.push(mean);
                // if too small value plotly prints "12" instead "12e-X"
-               errorArr.push((max - mean < mean / 10000.0) ? 0 : max - mean);
+               errorArrMax.push((max - mean < mean / 10000.0) ? 0 : max - mean);
+               errorArrMin.push((mean - min < mean / 10000.0) ? 0 : mean - min);
                max = 0;
+               min = Number.MAX_VALUE;
                sum = 0;
              }
              count = 0;
@@ -166,9 +169,10 @@
          }
          var traceData = { x: [], y: myarray, type: 'scatter', name: entry, connectgaps:
          false};
-         var dataError = dataSeries[entry + "_error"];
-         if(dataError && dataError.length == myarray.length) {
-           traceData.error_y = { type: 'data', array: dataError, visible: true};
+         var dataErrorMax = dataSeries[entry + "_delta.max"];
+         var dataErrorMin = dataSeries[entry + "_delta.min"];
+         if(dataErrorMax && dataErrorMax.length == myarray.length) {
+           traceData.error_y = { type: 'data', array: dataErrorMax, arrayminus: dataErrorMin, visible: true};
          }
 
          for(var i = 0; i < myarray.length; i++) {
